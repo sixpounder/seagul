@@ -8,4 +8,4 @@ edition = "2018"
 
 [dependencies]
 clap = "2.33.3"
-seagul_core = { path = "../seagul-core" }
+seagul_core = { path = "../seagul_core" }
