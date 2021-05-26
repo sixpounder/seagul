@@ -5,15 +5,6 @@ use std::{fmt::Display, process};
 use colored::Colorize;
 use prelude::VERBOSE;
 
-#[macro_export]
-macro_rules! everboseln {
-    ($($arg:tt)*) => ({
-        if *VERBOSE.lock().unwrap() == true {
-            eprintln!($($arg)*);
-        }
-    })
-}
-
 const VERSION_STR: &'static str = "1.0";
 
 fn main() {
@@ -182,68 +173,6 @@ fn main() {
         }
     }
 }
-
-// fn subcommand_channels(subcommand: &clap::ArgMatches) -> (Box<dyn Read>, Box<dyn Write>) {
-//     let input_reader = match subcommand.value_of("INPUT") {
-//         Some(arg) => Box::new(std::fs::File::open(arg).unwrap()) as Box<dyn std::io::Read>,
-//         None => Box::new(std::io::stdin()),
-//     };
-//     let out_writer = match subcommand.value_of("OUTPUT") {
-//         Some(arg) => Box::new(std::fs::File::create(arg).unwrap()) as Box<dyn std::io::Write>,
-//         None => Box::new(std::io::stdout()),
-//     };
-
-//     (input_reader, out_writer)
-// }
-
-// fn run_encode<R, W>(
-//     input: &mut R,
-//     data: &str,
-//     offset: usize,
-//     out: &mut W,
-// ) -> Result<(), std::io::Error>
-// where
-//     R: std::io::Read,
-//     W: std::io::Write,
-// {
-//     let mut encoder = seagul_core::encoder::ImageEncoder::from(input);
-//     encoder.set_offset(offset);
-
-//     match encoder.encode_string(String::from(data)) {
-//         Ok(image) => {
-//             everboseln!(
-//                 "ℹ️  {} pixels modified",
-//                 &image.pixels_changed().to_string().cyan()
-//             );
-//             image.write(out, seagul_core::prelude::ImageFormat::Png)
-//         }
-//         Err(some_error) => Err(std::io::Error::new(
-//             std::io::ErrorKind::Interrupted,
-//             some_error,
-//         )),
-//     }
-// }
-
-// fn run_decode<'a, R, W>(
-//     input: &mut R,
-//     out: &mut W,
-//     marker: Option<&'a [u8]>,
-// ) -> Result<(), std::io::Error>
-// where
-//     R: std::io::Read,
-//     W: std::io::Write,
-// {
-//     let mut decoder = seagul_core::decoder::ImageDecoder::from(input);
-
-//     decoder.until_marker(marker);
-//     match decoder.decode() {
-//         Ok(image) => image.write(out),
-//         Err(some_error) => Err(std::io::Error::new(
-//             std::io::ErrorKind::Interrupted,
-//             some_error,
-//         )),
-//     }
-// }
 
 fn set_verbose_from_args(matches: &clap::ArgMatches) {
     if matches.is_present("quiet") {
