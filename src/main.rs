@@ -36,6 +36,12 @@ fn main() {
                         .help("Number of least significant bits to use for decoding each pixel"),
                 )
                 .arg(
+                    clap::Arg::with_name("skip")
+                        .short("j")
+                        .long("jump")
+                        .help("When encoding data, `n` pixels will be skipped after each edited pixel"),
+                )
+                .arg(
                     clap::Arg::with_name("offset")
                         .short("s")
                         .long("skip")
@@ -95,6 +101,12 @@ fn main() {
                         .short("l")
                         .long("lsb")
                         .help("Number of least significant bits to use for decoding each pixel"),
+                )
+                .arg(
+                    clap::Arg::with_name("skip")
+                        .short("j")
+                        .long("jump")
+                        .help("When decoding data, `n` pixels will be skipped after each read pixel"),
                 )
                 .arg(
                     clap::Arg::with_name("decode_marker")
@@ -184,6 +196,6 @@ fn cli_error<E>(message: E)
 where
     E: Display,
 {
-    println!("{}", message);
+    println!("✖️  {}", message);
     process::exit(1);
 }

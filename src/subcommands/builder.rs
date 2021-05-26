@@ -57,5 +57,9 @@ where
         obj.set_use_channel(channel.into());
     }
 
+    if let Some(jump) = args.value_of("jump") {
+        obj.set_step_by_n_pixels(jump.parse().unwrap());
+    }
+
     obj
 }
