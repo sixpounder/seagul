@@ -13,6 +13,7 @@ keywords = [
 
 [dependencies]
 clap = "2.33.3"
+lazy_static = "1.4.0"
 seagul_core = { path = "../seagul_core" }
 
 [[bin]]

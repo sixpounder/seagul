@@ -1,15 +1,41 @@
+#[macro_use]
+
+macro_rules! everboseln {
+    ($($arg:tt)*) => ({
+        if *VERBOSE.lock().unwrap() == true {
+            eprintln!($($arg)*);
+        }
+    })
+}
+
 use std::{
     fmt::Display,
     io::{Read, Write},
     process,
+    sync::Mutex,
 };
 
 use clap::ArgMatches;
 
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref VERBOSE: Mutex<bool> = {
+        let cell = Mutex::new(false);
+        cell
+    };
+}
+
 fn main() {
     let mut app = clap::App::new("Seagul")
         .version("1.0")
-        .author("Andrea Coronese <sixpounder@pm.me")
+        .author("Andrea Coronese <sixpounder@pm.me>")
+        .arg(
+            clap::Arg::with_name("verbose")
+                .short("v")
+                .long("verbose")
+                .help("Verbose mode"),
+        )
         .subcommand(
             clap::SubCommand::with_name("encode")
                 .about("Encodes data into an image")
@@ -18,9 +44,7 @@ fn main() {
                         .short("d")
                         .long("data")
                         .value_name("DATA")
-                        .help(
-                            "Sets the data to encode in the final output"
-                        ),
+                        .help("Sets the data to encode in the final output"),
                 )
                 .arg(
                     clap::Arg::with_name("format")
@@ -30,16 +54,11 @@ fn main() {
                         .value_name("FORMAT")
                         .help("Sets the output format. Supported types are png, jpeg and bmp"),
                 )
-                .arg(
-                    clap::Arg::with_name("INPUT")
-                        .required(false)
-                        .index(1)
-                        .help(
-                            "The path to the input image file to use. \
+                .arg(clap::Arg::with_name("INPUT").required(false).index(1).help(
+                    "The path to the input image file to use. \
                             Attempts to read from stdin if not specified. \
                             This argument is ignored if the \"data\" option is also specified.",
-                        )
-                )
+                ))
                 .arg(
                     clap::Arg::with_name("OUTPUT")
                         .required(false)
@@ -61,16 +80,11 @@ fn main() {
                         .value_name("MARKER")
                         .help(
                             "Decode until this sequence of bytes is found (or the input file ends)",
-                        )
-                    )
-                .arg(
-                    clap::Arg::with_name("INPUT")
-                        .required(false)
-                        .index(1)
-                        .help(
-                            "Sets the input file to use. Attempts to read from stdin if not specified.",
-                        )
-                    )
+                        ),
+                )
+                .arg(clap::Arg::with_name("INPUT").required(false).index(1).help(
+                    "Sets the input file to use. Attempts to read from stdin if not specified.",
+                ))
                 .arg(
                     clap::Arg::with_name("OUTPUT")
                         .required(false)
@@ -83,6 +97,10 @@ fn main() {
         );
 
     let matches = app.clone().get_matches();
+
+    if let Some(_) = matches.value_of("verbose") {
+        *VERBOSE.lock().unwrap() = true;
+    }
 
     // Run subcommand
     match matches.subcommand_name() {
@@ -103,10 +121,8 @@ fn main() {
                 let (mut input_reader, mut output_writer) = subcommand_channels(subcommand_args);
 
                 let marker = match subcommand_args.value_of("decode_marker") {
-                    Some(marker) => {
-                        Some(marker.as_bytes())
-                    },
-                    None => None
+                    Some(marker) => Some(marker.as_bytes()),
+                    None => None,
                 };
 
                 match run_decode(&mut input_reader, &mut output_writer, marker) {
@@ -125,9 +141,7 @@ fn main() {
 
 fn subcommand_channels(subcommand: &ArgMatches) -> (Box<dyn Read>, Box<dyn Write>) {
     let input_reader = match subcommand.value_of("INPUT") {
-        Some(arg) => {
-            Box::new(std::fs::File::open(arg).unwrap()) as Box<dyn std::io::Read>
-        },
+        Some(arg) => Box::new(std::fs::File::open(arg).unwrap()) as Box<dyn std::io::Read>,
         None => Box::new(std::io::stdin()),
     };
     let out_writer = match subcommand.value_of("OUTPUT") {
@@ -146,7 +160,10 @@ where
     let encoder = seagul_core::encoder::ImageEncoder::from(input);
 
     match encoder.encode_string(String::from(data)) {
-        Ok(image) => image.write(out, seagul_core::prelude::ImageFormat::Png),
+        Ok(image) => {
+            everboseln!("{} pixels modified", &image.pixels_changed());
+            image.write(out, seagul_core::prelude::ImageFormat::Png)
+        }
         Err(some_error) => Err(std::io::Error::new(
             std::io::ErrorKind::Interrupted,
             some_error,
@@ -154,7 +171,11 @@ where
     }
 }
 
-fn run_decode<'a, R, W>(input: &mut R, out: &mut W, marker: Option<&'a [u8]>) -> Result<(), std::io::Error>
+fn run_decode<'a, R, W>(
+    input: &mut R,
+    out: &mut W,
+    marker: Option<&'a [u8]>,
+) -> Result<(), std::io::Error>
 where
     R: std::io::Read,
     W: std::io::Write,
