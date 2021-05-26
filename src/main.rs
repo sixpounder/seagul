@@ -1,5 +1,11 @@
-#[macro_use]
+pub mod prelude;
+mod subcommands;
 
+use std::{fmt::Display, process};
+use colored::Colorize;
+use prelude::VERBOSE;
+
+#[macro_export]
 macro_rules! everboseln {
     ($($arg:tt)*) => ({
         if *VERBOSE.lock().unwrap() == true {
@@ -8,37 +14,43 @@ macro_rules! everboseln {
     })
 }
 
-use std::{
-    fmt::Display,
-    io::{Read, Write},
-    process,
-    sync::Mutex,
-};
-
-use clap::ArgMatches;
-
-use lazy_static::lazy_static;
-
-lazy_static! {
-    static ref VERBOSE: Mutex<bool> = {
-        let cell = Mutex::new(false);
-        cell
-    };
-}
+const VERSION_STR: &'static str = "1.0";
 
 fn main() {
     let mut app = clap::App::new("Seagul")
-        .version("1.0")
+        .version(VERSION_STR)
         .author("Andrea Coronese <sixpounder@pm.me>")
-        .arg(
-            clap::Arg::with_name("verbose")
-                .short("v")
-                .long("verbose")
-                .help("Verbose mode"),
-        )
         .subcommand(
             clap::SubCommand::with_name("encode")
+                .version(VERSION_STR)
                 .about("Encodes data into an image")
+                .arg(
+                    clap::Arg::with_name("quiet")
+                        .short("q")
+                        .long("quiet")
+                        .help("Silent mode, suppresses output to STDERR"),
+                )
+                .arg(
+                    clap::Arg::with_name("channel")
+                        .short("c")
+                        .long("channel")
+                        .help("The cannel to decode for each pixel. Possibile values \
+                            are 'red', 'green' and 'blue'. Defaults to 'blue'."
+                        ),
+                )
+                .arg(
+                    clap::Arg::with_name("lsb")
+                        .short("l")
+                        .long("lsb")
+                        .help("Number of least significant bits to use for decoding each pixel"),
+                )
+                .arg(
+                    clap::Arg::with_name("offset")
+                        .short("s")
+                        .long("skip")
+                        .value_name("offset")
+                        .help("Skip n pixels before encoding the message"),
+                )
                 .arg(
                     clap::Arg::with_name("data")
                         .short("d")
@@ -72,6 +84,27 @@ fn main() {
         .subcommand(
             clap::SubCommand::with_name("decode")
                 .about("Attempt to decode a message from an image")
+                .version(VERSION_STR)
+                .arg(
+                    clap::Arg::with_name("quiet")
+                        .short("q")
+                        .long("quiet")
+                        .help("Silent mode, suppresses output to STDERR"),
+                )
+                .arg(
+                    clap::Arg::with_name("channel")
+                        .short("c")
+                        .long("channel")
+                        .help("The cannel to decode for each pixel. Possibile values \
+                            are 'red', 'green' and 'blue'. Defaults to 'blue'."
+                        ),
+                )
+                .arg(
+                    clap::Arg::with_name("lsb")
+                        .short("l")
+                        .long("lsb")
+                        .help("Number of least significant bits to use for decoding each pixel"),
+                )
                 .arg(
                     clap::Arg::with_name("decode_marker")
                         .required(false)
@@ -98,18 +131,27 @@ fn main() {
 
     let matches = app.clone().get_matches();
 
-    if let Some(_) = matches.value_of("verbose") {
-        *VERBOSE.lock().unwrap() = true;
+    if matches.is_present("quiet") {
+        *VERBOSE.lock().unwrap() = false;
     }
+
+    let start = std::time::Instant::now();
 
     // Run subcommand
     match matches.subcommand_name() {
         Some("encode") => {
             if let Some(subcommand_args) = matches.subcommand_matches("encode") {
-                let (mut input_reader, mut output_writer) = subcommand_channels(subcommand_args);
-                let data_to_encode = subcommand_args.value_of("data").unwrap_or("");
-                match run_encode(&mut input_reader, data_to_encode, &mut output_writer) {
-                    Ok(_) => {}
+                set_verbose_from_args(subcommand_args);
+                match subcommands::encode(subcommand_args) {
+                    Ok(_) => {
+                        let end = std::time::Instant::now();
+                        everboseln!(
+                            "✔️  Done in {}",
+                            format!("{} ms", (end - start).as_millis())
+                                .to_string()
+                                .cyan()
+                        );
+                    }
                     Err(e) => {
                         cli_error(e);
                     }
@@ -118,15 +160,17 @@ fn main() {
         }
         Some("decode") => {
             if let Some(subcommand_args) = matches.subcommand_matches("decode") {
-                let (mut input_reader, mut output_writer) = subcommand_channels(subcommand_args);
-
-                let marker = match subcommand_args.value_of("decode_marker") {
-                    Some(marker) => Some(marker.as_bytes()),
-                    None => None,
-                };
-
-                match run_decode(&mut input_reader, &mut output_writer, marker) {
-                    Ok(_) => {}
+                set_verbose_from_args(subcommand_args);
+                match subcommands::decode(subcommand_args) {
+                    Ok(_) => {
+                        let end = std::time::Instant::now();
+                        everboseln!(
+                            "✔️  Done in {}",
+                            format!("{} ms", (end - start).as_millis())
+                                .to_string()
+                                .cyan()
+                        );
+                    }
                     Err(e) => {
                         cli_error(e);
                     }
@@ -139,57 +183,71 @@ fn main() {
     }
 }
 
-fn subcommand_channels(subcommand: &ArgMatches) -> (Box<dyn Read>, Box<dyn Write>) {
-    let input_reader = match subcommand.value_of("INPUT") {
-        Some(arg) => Box::new(std::fs::File::open(arg).unwrap()) as Box<dyn std::io::Read>,
-        None => Box::new(std::io::stdin()),
-    };
-    let out_writer = match subcommand.value_of("OUTPUT") {
-        Some(arg) => Box::new(std::fs::File::create(arg).unwrap()) as Box<dyn std::io::Write>,
-        None => Box::new(std::io::stdout()),
-    };
+// fn subcommand_channels(subcommand: &clap::ArgMatches) -> (Box<dyn Read>, Box<dyn Write>) {
+//     let input_reader = match subcommand.value_of("INPUT") {
+//         Some(arg) => Box::new(std::fs::File::open(arg).unwrap()) as Box<dyn std::io::Read>,
+//         None => Box::new(std::io::stdin()),
+//     };
+//     let out_writer = match subcommand.value_of("OUTPUT") {
+//         Some(arg) => Box::new(std::fs::File::create(arg).unwrap()) as Box<dyn std::io::Write>,
+//         None => Box::new(std::io::stdout()),
+//     };
 
-    (input_reader, out_writer)
-}
+//     (input_reader, out_writer)
+// }
 
-fn run_encode<R, W>(input: &mut R, data: &str, out: &mut W) -> Result<(), std::io::Error>
-where
-    R: std::io::Read,
-    W: std::io::Write,
-{
-    let encoder = seagul_core::encoder::ImageEncoder::from(input);
+// fn run_encode<R, W>(
+//     input: &mut R,
+//     data: &str,
+//     offset: usize,
+//     out: &mut W,
+// ) -> Result<(), std::io::Error>
+// where
+//     R: std::io::Read,
+//     W: std::io::Write,
+// {
+//     let mut encoder = seagul_core::encoder::ImageEncoder::from(input);
+//     encoder.set_offset(offset);
 
-    match encoder.encode_string(String::from(data)) {
-        Ok(image) => {
-            everboseln!("{} pixels modified", &image.pixels_changed());
-            image.write(out, seagul_core::prelude::ImageFormat::Png)
-        }
-        Err(some_error) => Err(std::io::Error::new(
-            std::io::ErrorKind::Interrupted,
-            some_error,
-        )),
-    }
-}
+//     match encoder.encode_string(String::from(data)) {
+//         Ok(image) => {
+//             everboseln!(
+//                 "ℹ️  {} pixels modified",
+//                 &image.pixels_changed().to_string().cyan()
+//             );
+//             image.write(out, seagul_core::prelude::ImageFormat::Png)
+//         }
+//         Err(some_error) => Err(std::io::Error::new(
+//             std::io::ErrorKind::Interrupted,
+//             some_error,
+//         )),
+//     }
+// }
 
-fn run_decode<'a, R, W>(
-    input: &mut R,
-    out: &mut W,
-    marker: Option<&'a [u8]>,
-) -> Result<(), std::io::Error>
-where
-    R: std::io::Read,
-    W: std::io::Write,
-{
-    let mut decoder = seagul_core::decoder::ImageDecoder::from(input);
+// fn run_decode<'a, R, W>(
+//     input: &mut R,
+//     out: &mut W,
+//     marker: Option<&'a [u8]>,
+// ) -> Result<(), std::io::Error>
+// where
+//     R: std::io::Read,
+//     W: std::io::Write,
+// {
+//     let mut decoder = seagul_core::decoder::ImageDecoder::from(input);
 
-    decoder.until_marker(marker);
+//     decoder.until_marker(marker);
+//     match decoder.decode() {
+//         Ok(image) => image.write(out),
+//         Err(some_error) => Err(std::io::Error::new(
+//             std::io::ErrorKind::Interrupted,
+//             some_error,
+//         )),
+//     }
+// }
 
-    match decoder.decode() {
-        Ok(image) => image.write(out),
-        Err(some_error) => Err(std::io::Error::new(
-            std::io::ErrorKind::Interrupted,
-            some_error,
-        )),
+fn set_verbose_from_args(matches: &clap::ArgMatches) {
+    if matches.is_present("quiet") {
+        *VERBOSE.lock().unwrap() = false;
     }
 }
 
