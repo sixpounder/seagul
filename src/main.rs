@@ -8,6 +8,18 @@ use prelude::VERBOSE;
 const VERSION_STR: &'static str = "1.0";
 
 fn main() {
+    std::panic::set_hook(Box::new(|info| {
+        let message = match info.payload().downcast_ref::<&'static str>() {
+            Some(s) => *s,
+            None => match info.payload().downcast_ref::<String>() {
+                Some(s) => &s[..],
+                None => "Unknown error"
+            }
+        };
+        println!("💀️ {} 💀️", message);
+        // cli_error(message);
+    }));
+
     let mut app = clap::App::new("Seagul")
         .version(VERSION_STR)
         .author("Andrea Coronese <sixpounder@pm.me>")
