@@ -1,13 +1,25 @@
 pub mod prelude;
 mod subcommands;
 
-use std::{fmt::Display, process};
+use std::{fmt::Display, panic::PanicInfo, process};
 use colored::Colorize;
 use prelude::VERBOSE;
 
 const VERSION_STR: &'static str = "1.0";
 
 fn main() {
+    std::panic::set_hook(Box::new(|info: &PanicInfo| {
+        let message = match info.payload().downcast_ref::<&'static str>() {
+            Some(s) => *s,
+            None => match info.payload().downcast_ref::<String>() {
+                Some(s) => &s[..],
+                None => "Unknown error"
+            }
+        };
+        println!("💀️ {} 💀️", message);
+        // cli_error(message);
+    }));
+
     let mut app = clap::App::new("Seagul")
         .version(VERSION_STR)
         .author("Andrea Coronese <sixpounder@pm.me>")
@@ -36,15 +48,16 @@ fn main() {
                         .help("Number of least significant bits to use for decoding each pixel"),
                 )
                 .arg(
-                    clap::Arg::with_name("skip")
+                    clap::Arg::with_name("jump")
                         .short("j")
                         .long("jump")
+                        .value_name("jump")
                         .help("When encoding data, `n` pixels will be skipped after each edited pixel"),
                 )
                 .arg(
                     clap::Arg::with_name("offset")
-                        .short("s")
-                        .long("skip")
+                        .short("o")
+                        .long("offset")
                         .value_name("offset")
                         .help("Skip n pixels before encoding the message"),
                 )
@@ -103,7 +116,7 @@ fn main() {
                         .help("Number of least significant bits to use for decoding each pixel"),
                 )
                 .arg(
-                    clap::Arg::with_name("skip")
+                    clap::Arg::with_name("jump")
                         .short("j")
                         .long("jump")
                         .help("When decoding data, `n` pixels will be skipped after each read pixel"),

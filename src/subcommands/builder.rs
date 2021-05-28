@@ -5,11 +5,15 @@ use seagul_core::{decoder::ImageDecoder, encoder::ImageEncoder, prelude::ImageRu
 /// Constructs input and output channels based on comman line arguments
 pub fn subcommand_channels(subcommand: &clap::ArgMatches) -> (Box<dyn Read>, Box<dyn Write>) {
     let input_reader = match subcommand.value_of("INPUT") {
-        Some(arg) => Box::new(std::fs::File::open(arg).unwrap()) as Box<dyn std::io::Read>,
+        Some(arg) => Box::new(
+            std::fs::File::open(arg).expect(format!("Could not open file at {}", arg).as_str()),
+        ) as Box<dyn std::io::Read>,
         None => Box::new(std::io::stdin()),
     };
     let out_writer = match subcommand.value_of("OUTPUT") {
-        Some(arg) => Box::new(std::fs::File::create(arg).unwrap()) as Box<dyn std::io::Write>,
+        Some(arg) => Box::new(
+            std::fs::File::create(arg).expect(format!("Could not create file at {}", arg).as_str()),
+        ) as Box<dyn std::io::Write>,
         None => Box::new(std::io::stdout()),
     };
 
@@ -49,11 +53,11 @@ where
     T: ImageRules,
 {
     if let Some(lsb) = args.value_of("lsb") {
-        obj.set_offset(lsb.parse().unwrap());
+        obj.set_offset(lsb.parse().expect("'lsb' option value should be numeric"));
     }
 
     if let Some(offset) = args.value_of("offset") {
-        obj.set_offset(offset.parse().unwrap());
+        obj.set_offset(offset.parse().expect("'offset' option value should be numeric"));
     }
 
     if let Some(channel) = args.value_of("channel") {
@@ -61,7 +65,7 @@ where
     }
 
     if let Some(jump) = args.value_of("jump") {
-        obj.set_step_by_n_pixels(jump.parse().unwrap());
+        obj.set_step_by_n_pixels(jump.parse().expect("'jump' option value should be numeric"));
     }
 
     obj
