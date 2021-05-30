@@ -2,6 +2,7 @@ use std::io::{Read, Write};
 
 use seagul_core::{decoder::ImageDecoder, encoder::ImageEncoder, prelude::ImageRules};
 
+/// Constructs input and output channels based on comman line arguments
 pub fn subcommand_channels(subcommand: &clap::ArgMatches) -> (Box<dyn Read>, Box<dyn Write>) {
     let input_reader = match subcommand.value_of("INPUT") {
         Some(arg) => Box::new(
@@ -19,6 +20,7 @@ pub fn subcommand_channels(subcommand: &clap::ArgMatches) -> (Box<dyn Read>, Box
     (input_reader, out_writer)
 }
 
+/// Constructs an image encoder based on command line arguments
 pub fn encoder_from_args<T>(source: T, args: &clap::ArgMatches) -> ImageEncoder
 where
     ImageEncoder: From<T>,
@@ -30,6 +32,7 @@ where
     encoder
 }
 
+/// Constructs an image decoder based on command line arguments
 pub fn decoder_from_args<'a, T>(source: T, args: &'a clap::ArgMatches) -> ImageDecoder<'a>
 where
     ImageDecoder<'a>: From<T>,
