@@ -1,6 +1,6 @@
 [package]
 name = "seagul"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Andrea Coronese <sixpounder@protonmail.com>"]
 edition = "2018"
 description = "A CLI utility to encode (and decode) arbitrary information into images"
@@ -8,7 +8,7 @@ readme = "README.md"
 homepage = "https://github.com/sixpounder/seagul"
 repository = "https://github.com/sixpounder/seagul"
 license = "GPL-2.0"
-categories = ["Command line utilities"]
+categories = ["command-line-utilities"]
 keywords = [
     "image",
     "steganography",
