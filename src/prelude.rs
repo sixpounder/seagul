@@ -16,3 +16,9 @@ macro_rules! everboseln {
         }
     })
 }
+
+pub fn verbose_do<F>(f: F) where F: FnOnce() -> () {
+    if *VERBOSE.lock().unwrap() == true {
+        f();
+    }
+}

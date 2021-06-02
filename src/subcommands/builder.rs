@@ -68,5 +68,9 @@ where
         obj.set_step_by_n_pixels(jump.parse().expect("'jump' option value should be numeric"));
     }
 
+    if let Some(_) = args.value_of("spread") {
+        obj.set_spread(true);
+    }
+
     obj
 }

@@ -1,9 +1,9 @@
 pub mod prelude;
 mod subcommands;
 
-use std::{fmt::Display, panic::PanicInfo, process};
 use colored::Colorize;
 use prelude::VERBOSE;
+use std::{fmt::Display, panic::PanicInfo, process};
 
 const VERSION_STR: &'static str = "1.0";
 
@@ -13,8 +13,8 @@ fn main() {
             Some(s) => *s,
             None => match info.payload().downcast_ref::<String>() {
                 Some(s) => &s[..],
-                None => "Unknown error"
-            }
+                None => "Unknown error",
+            },
         };
         println!("💀️ {} 💀️", message);
         // cli_error(message);
@@ -60,6 +60,12 @@ fn main() {
                         .long("offset")
                         .value_name("offset")
                         .help("Skip n pixels before encoding the message"),
+                )
+                .arg(
+                    clap::Arg::with_name("spread")
+                        .short("s")
+                        .long("spread")
+                        .help("Encodes data across all the image, as long as there is space to do so. Data is truncated, if needed, at the end of the image")
                 )
                 .arg(
                     clap::Arg::with_name("data")
