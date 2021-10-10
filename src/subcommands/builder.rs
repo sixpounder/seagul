@@ -72,5 +72,9 @@ where
         obj.set_spread(true);
     }
 
+    if let Some(padding) = args.value_of("padding") {
+        obj.set_padding(padding);
+    }
+
     obj
 }
