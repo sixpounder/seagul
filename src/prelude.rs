@@ -11,9 +11,12 @@ lazy_static! {
 #[macro_export]
 macro_rules! everboseln {
     ($($arg:tt)*) => ({
-        if *VERBOSE.lock().unwrap() == true {
+        // if *VERBOSE.lock().unwrap() == true {
+        //     eprintln!($($arg)*);
+        // }
+        crate::prelude::verbose_do(|| {
             eprintln!($($arg)*);
-        }
+        })
     })
 }
 

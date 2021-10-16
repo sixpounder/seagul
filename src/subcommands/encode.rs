@@ -1,5 +1,4 @@
 use colored::Colorize;
-use crate::prelude::*;
 use crate::everboseln;
 
 pub fn encode(args: &clap::ArgMatches) -> Result<(), std::io::Error> {
@@ -8,7 +7,7 @@ pub fn encode(args: &clap::ArgMatches) -> Result<(), std::io::Error> {
     
     let data = args.value_of("data").unwrap_or("");
 
-    match encoder.encode_string(String::from(data)) {
+    match encoder.encode_bytes(data.as_bytes()) {
         Ok(image) => {
             everboseln!(
                 "ℹ️  {} pixels modified",

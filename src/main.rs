@@ -6,6 +6,8 @@ use prelude::VERBOSE;
 use std::{fmt::Display, panic::PanicInfo, process};
 
 const VERSION_STR: &'static str = "1.0";
+const ENCODE_COMMAND: &'static str = "encode";
+const DECODE_COMMAND: &'static str = "decode";
 
 fn main() {
     std::panic::set_hook(Box::new(|info: &PanicInfo| {
@@ -24,7 +26,7 @@ fn main() {
         .version(VERSION_STR)
         .author("Andrea Coronese <sixpounder@pm.me>")
         .subcommand(
-            clap::SubCommand::with_name("encode")
+            clap::SubCommand::with_name(ENCODE_COMMAND)
                 .version(VERSION_STR)
                 .about("Encodes data into an image")
                 .arg(
@@ -45,7 +47,7 @@ fn main() {
                     clap::Arg::with_name("lsb")
                         .short("l")
                         .long("lsb")
-                        .help("Number of least significant bits to use for decoding each pixel"),
+                        .help("Number of least significant bits to use on each pixel"),
                 )
                 .arg(
                     clap::Arg::with_name("jump")
@@ -98,7 +100,7 @@ fn main() {
                 ),
         )
         .subcommand(
-            clap::SubCommand::with_name("decode")
+            clap::SubCommand::with_name(DECODE_COMMAND)
                 .about("Attempt to decode a message from an image")
                 .version(VERSION_STR)
                 .arg(
@@ -161,7 +163,7 @@ fn main() {
 
     // Run subcommand
     match matches.subcommand_name() {
-        Some("encode") => {
+        Some(ENCODE_COMMAND) => {
             if let Some(subcommand_args) = matches.subcommand_matches("encode") {
                 set_verbose_from_args(subcommand_args);
                 match subcommands::encode(subcommand_args) {
@@ -180,7 +182,7 @@ fn main() {
                 }
             }
         }
-        Some("decode") => {
+        Some(DECODE_COMMAND) => {
             if let Some(subcommand_args) = matches.subcommand_matches("decode") {
                 set_verbose_from_args(subcommand_args);
                 match subcommands::decode(subcommand_args) {
