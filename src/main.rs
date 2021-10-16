@@ -70,6 +70,13 @@ fn main() {
                         .help("Encodes data across all the image, as long as there is space to do so. Data is truncated, if needed, at the end of the image")
                 )
                 .arg(
+                    clap::Arg::with_name("padding")
+                        .short("p")
+                        .long("padding")
+                        .value_name("padding")
+                        .help("Pads the encoded message by encoding all remaining pixels with a fixed content")
+                )
+                .arg(
                     clap::Arg::with_name("data")
                         .short("d")
                         .long("data")
